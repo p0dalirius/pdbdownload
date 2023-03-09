@@ -54,7 +54,7 @@ def get_pe_debug_infos(pathtopefile):
 
 def parseArgs():
     print("pdbdownload v%s - by @podalirius_\n" % VERSION)
-    
+
     parser = argparse.ArgumentParser(description="Download PDB files associated with a Portable Executable (PE).")
 
     group_pesource = parser.add_mutually_exclusive_group(required=True)
@@ -75,17 +75,20 @@ def main():
         os.makedirs(options.symbols_dir, exist_ok=True)
 
     if options.pe_dir is not None:
+        options.pe_dir = os.path.abspath(options.pe_dir)
         list_of_pe_files = []
 
         if options.verbose:
             print("[debug] Searching for PE files in '%s' ..." % options.pe_dir)
         for root, dirs, files in os.walk(options.pe_dir):
+            assert root.startswith(options.pe_dir)
             for filename in files:
                 if filename.lower().endswith(".exe") or filename.lower().endswith(".dll"):
                     name = os.path.join(root, filename)
-                    list_of_pe_files.append(name)
+                    subdir = root[len(options.pe_dir) + 1:]
+                    list_of_pe_files.append((name, subdir))
 
-        for pef in list_of_pe_files:
+        for pef, subdir in list_of_pe_files:
             if options.verbose:
                 print("[>] Reading PE file '%s'" % pef)
             pdbname, guid, pdbage = get_pe_debug_infos(pef)
@@ -93,7 +96,7 @@ def main():
                 print("  | PdbName '%s'" % pdbname)
                 print("  | GUID    %s" % guid)
                 print("  | Age     0x%x" % pdbage)
-            download_pdb(options.symbols_dir, pdbname, guid, pdbage)
+            download_pdb(os.path.join(options.symbols_dir, subdir), pdbname, guid, pdbage)
 
     elif options.pe_file is not None:
         if options.verbose:
