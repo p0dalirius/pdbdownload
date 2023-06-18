@@ -13,11 +13,11 @@ import requests
 from rich import progress
 
 
-VERSION = "1.2"
+VERSION = "1.3"
 
 
-def download_pdb(download_dir, pdbname, guid, pdbage):
-    download_url = "http://msdl.microsoft.com/download/symbols/%s/%s%X/%s" % (pdbname, guid.upper(), pdbage, pdbname)
+def download_pdb(download_dir, pdbname, guid):
+    download_url = "https://msdl.microsoft.com/download/symbols/%s/%s/%s" % (pdbname, guid.upper(), pdbname)
     print("[>] Downloading %s" % download_url)
     r = requests.head(
         download_url,
@@ -43,13 +43,7 @@ def get_pe_debug_infos(pathtopefile):
     raw_debug_data = [e for e in p.parse_debug_directory(pedata["IMAGE_DIRECTORY_ENTRY_DEBUG"].VirtualAddress, pedata["IMAGE_DIRECTORY_ENTRY_DEBUG"].Size) if e.entry is not None]
     raw_debug_data = raw_debug_data[0].entry
 
-    guid = "%08X%04X%04X%s" % (
-        raw_debug_data.Signature_Data1,
-        raw_debug_data.Signature_Data2,
-        raw_debug_data.Signature_Data3,
-        binascii.hexlify(raw_debug_data.Signature_Data4).decode("utf-8").upper()
-    )
-    return raw_debug_data.PdbFileName.strip(b'\x00').decode("utf-8"), guid, raw_debug_data.Age
+    return raw_debug_data.PdbFileName.strip(b'\x00').decode("utf-8"), p.DIRECTORY_ENTRY_DEBUG[0].entry.Signature_String, raw_debug_data.Age
 
 
 def parseArgs():
@@ -91,22 +85,20 @@ def main():
         for pef, subdir in list_of_pe_files:
             if options.verbose:
                 print("[>] Reading PE file '%s'" % pef)
-            pdbname, guid, pdbage = get_pe_debug_infos(pef)
+            pdbname, guid = get_pe_debug_infos(pef)
             if options.verbose:
                 print("  | PdbName '%s'" % pdbname)
                 print("  | GUID    %s" % guid)
-                print("  | Age     0x%x" % pdbage)
-            download_pdb(os.path.join(options.symbols_dir, subdir), pdbname, guid, pdbage)
+            download_pdb(os.path.join(options.symbols_dir, subdir), pdbname, guid)
 
     elif options.pe_file is not None:
         if options.verbose:
             print("[>] Reading PE file '%s'" % options.pe_file)
-        pdbname, guid, pdbage = get_pe_debug_infos(options.pe_file)
+        pdbname, guid = get_pe_debug_infos(options.pe_file)
         if options.verbose:
             print("  | PdbName '%s'" % pdbname)
             print("  | GUID    %s" % guid)
-            print("  | Age     0x%x" % pdbage)
-        download_pdb(options.symbols_dir, pdbname, guid, pdbage)
+        download_pdb(options.symbols_dir, pdbname, guid)
 
 
 if __name__ == '__main__':
