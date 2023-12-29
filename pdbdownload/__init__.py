@@ -3,7 +3,7 @@
 # File name          : __init__.py
 # Author             : Podalirius (@podalirius_)
 # Date created       : 7 Feb 2023
-
+# Modified           : @winapiadmin
 import pefile
 import requests
 from rich import progress
